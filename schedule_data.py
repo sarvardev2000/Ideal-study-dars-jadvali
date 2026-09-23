@@ -105,7 +105,7 @@ CLASSES = {
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Nodira B."},
         ],
         "Seshanba": [
-            {"soat": "1-dars", "fan": "Mental", "ustoz": "Maftuna"},
+            {"soat": "1-dars", "fan": "Mental", "ustoz": "Maftuna F."},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Nodira B."},
             {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
             {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Nodira B."},
@@ -144,7 +144,7 @@ CLASSES = {
         "Seshanba": [
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
             {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
-            {"soat": "3-dars", "fan": "Mental", "ustoz": "Maftuna"},
+            {"soat": "3-dars", "fan": "Mental", "ustoz": "Maftuna F."},
             {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Xabiba"},
         ],
         "Chorshanba": [
@@ -223,7 +223,7 @@ CLASSES = {
             {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Ra'no"},
         ],
         "Chorshanba": [
-            {"soat": "1-dars", "fan": "Mental", "ustoz": "Maftuna"},
+            {"soat": "1-dars", "fan": "Mental", "ustoz": "Maftuna F."},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ra'no"},
             {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
             {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
@@ -1684,7 +1684,7 @@ CLASSES = {
         "Chorshanba": [
             {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
-            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
         ],
@@ -1699,7 +1699,7 @@ CLASSES = {
             {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
             {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
             {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
-            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
         ],
         "Shanba": [
@@ -1717,7 +1717,7 @@ CLASSES = {
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
         ],
         "Seshanba": [
-            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
             {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
             {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
@@ -1738,7 +1738,7 @@ CLASSES = {
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
         ],
         "Juma": [
-            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
             {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
             {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
@@ -1797,7 +1797,7 @@ CLASSES = {
             {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
             {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maxmud"},
-            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
         ],
         "Seshanba": [
@@ -1826,7 +1826,7 @@ CLASSES = {
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
             {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maxmud"},
             {"soat": "4-dars", "fan": "Fizika", "ustoz": "Noila"},
-            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
         "Shanba": [
             {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
@@ -1844,7 +1844,7 @@ CLASSES = {
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
             {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
             {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
-            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
         "Seshanba": [
             {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
@@ -1857,12 +1857,12 @@ CLASSES = {
             {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
             {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Muhammadjon"},
-            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
         ],
         "Payshanba": [
             {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Muhammadjon"},
-            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "3-dars", "fan": "Fizika", "ustoz": "Noila"},
             {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Maxmud"},
@@ -1911,14 +1911,14 @@ CLASSES = {
         ],
         "Juma": [
             {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
-            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
             {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
             {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
         ],
         "Shanba": [
             {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Islom"},
-            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
     },
 
@@ -1926,7 +1926,7 @@ CLASSES = {
         "Dushanba": [
             {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
-            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
             {"soat": "5-dars", "fan": "Biologiya", "ustoz": "Islom"},
         ],
@@ -1948,7 +1948,7 @@ CLASSES = {
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Umid"},
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
             {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
-            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
         ],
         "Juma": [
@@ -2020,7 +2020,7 @@ CLASSES = {
         ],
         "Seshanba": [
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
-            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
             {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
             {"soat": "5-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
@@ -2064,7 +2064,7 @@ CLASSES = {
             {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
             {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
-            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
         ],
         "Chorshanba": [
@@ -2072,19 +2072,19 @@ CLASSES = {
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
             {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
             {"soat": "4-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
-            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
         "Payshanba": [
             {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
             {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
             {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
             {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
-            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
         "Juma": [
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Umid"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
-            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
             {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
         ],
@@ -2097,7 +2097,7 @@ CLASSES = {
     "9-V": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
         "Dushanba": [
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
-            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
             {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
             {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
@@ -2107,7 +2107,7 @@ CLASSES = {
             {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
             {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
             {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
-            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
         ],
         "Chorshanba": [
             {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
@@ -2119,7 +2119,7 @@ CLASSES = {
         "Payshanba": [
             {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
             {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
-            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
             {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
         ],
@@ -2159,7 +2159,7 @@ CLASSES = {
             {"soat": "5-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
         ],
         "Payshanba": [
-            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar"},
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
             {"soat": "2-dars", "fan": "Kimyo", "ustoz": "Ismoil"},
             {"soat": "3-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
             {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
@@ -2204,3 +2204,48 @@ def _build_teachers_from_classes(classes_dict):
 
 
 TEACHERS = _build_teachers_from_classes(CLASSES)
+
+
+# ============================================================
+# QO'SHIMCHA YUK: Mental arifmetika (Maftuna F.)
+# ============================================================
+# Bu darslar 0-sinf va 1-sinflarda o'tiladi, lekin CLASSES ichiga
+# QO'SHILMAGAN (foydalanuvchi iltimosiga ko'ra) - faqat shu ustozning
+# o'z shaxsiy jadvalida ko'rinadi.
+# Kun davomida: 1-5 soat - tushlikkacha smena, 6-8 soat - tushlikdan keyin.
+
+_maftuna_extra = {
+    "Dushanba": [
+        {"soat": "1-soat", "sinf": "0-E", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-A", "fan": "Mental arifmetika"},
+        {"soat": "3-soat", "sinf": "0-D", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "0-sinf", "fan": "Mental arifmetika"},  # aniq harf berilmagan
+    ],
+    "Seshanba": [
+        {"soat": "6-soat", "sinf": "1-E", "fan": "Mental arifmetika"},
+        {"soat": "8-soat", "sinf": "1-A", "fan": "Mental arifmetika"},
+    ],
+    "Chorshanba": [
+        {"soat": "1-soat", "sinf": "1-F", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-B", "fan": "Mental arifmetika"},
+        {"soat": "4-soat", "sinf": "0-A", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "0-sinf", "fan": "Mental arifmetika"},  # aniq harf berilmagan
+    ],
+    "Payshanba": [
+        {"soat": "8-soat", "sinf": "1-H", "fan": "Mental arifmetika"},
+    ],
+    "Juma": [
+        {"soat": "1-soat", "sinf": "0-B", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-E", "fan": "Mental arifmetika"},
+        {"soat": "3-soat", "sinf": "0-D", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "1-G", "fan": "Mental arifmetika"},
+        {"soat": "8-soat", "sinf": "1-V", "fan": "Mental arifmetika"},
+    ],
+    "Shanba": [],
+}
+
+if "Maftuna F." not in TEACHERS:
+    TEACHERS["Maftuna F."] = {d: [] for d in DAYS}
+
+for _day, _lessons in _maftuna_extra.items():
+    TEACHERS["Maftuna F."][_day].extend(_lessons)
