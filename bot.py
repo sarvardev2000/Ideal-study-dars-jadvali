@@ -1,254 +1,2266 @@
 # -*- coding: utf-8 -*-
 """
-IDEAL STUDY - Dars jadvali Telegram boti
-==========================================
-Bu botni ishga tushirish uchun:
-  1) Terminalda shu papkaga kiring
-  2) python -m venv venv          (bir marta)
-  3) venv\\Scripts\\activate        (Windows)  yoki  source venv/bin/activate  (Mac/Linux)
-  4) pip install -r requirements.txt
-  5) .env faylini yarating va ichiga BOT_TOKEN=sizning_tokeningiz deb yozing
-  6) python bot.py
+IDEAL STUDY maktabining dars jadvali (2026-2027 o'quv yili).
+Manba: "Dars jadvali 1-3" va "Dars jadvali 4-11" PDF fayllari (13.10.2026 yangilanishi).
 
-Batafsil qo'llanma README.md faylida.
+MUHIM: TEACHERS (o'qituvchilar jadvali) QO'LDA yozilmaydi -
+u CLASSES (sinflar jadvali) asosida pastdagi kod orqali AVTOMATIK hisoblanadi.
+
+Izohlar:
+- Agar darsda ustoz ismi ko'rsatilmagan bo'lsa (masalan "Matematika"),
+  bu dars sinf rahbari tomonidan o'tiladi - "ustoz" maydoniga sinf rahbarining ismi yozilgan.
+- Bir soatda ikki xil fan yozilgan bo'lsa (masalan guruhlarga bo'lingan dars),
+  ikkalasi ham shu soat ostida alohida satr bo'lib turadi.
+- 4-sinfdan yuqorida soatlar smenasiz, ketma-ket (1-dars, 2-dars...) raqamlangan.
 """
 
-import asyncio
-import logging
-import os
-
-from aiogram import Bot, Dispatcher, F, Router
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from dotenv import load_dotenv
-
-from schedule_data import CLASSES, TEACHERS, DAYS
-
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-logging.basicConfig(level=logging.INFO)
-router = Router()
-
-# Sahifalardagi tugmalar sonini cheklash (o'qituvchilar ro'yxati uzun bo'lsa, sahifalarga bo'linadi)
-PAGE_SIZE = 8
-
-CLASS_NAMES = list(CLASSES.keys())
-TEACHER_NAMES = sorted(TEACHERS.keys(), key=str.lower)
+DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"]
 
 
-def get_grade(class_name: str) -> str:
-    """'5-A' dan '5' ni ajratib oladi. Agar '-' bo'lmasa, sinf nomining o'zini qaytaradi."""
-    return class_name.split("-")[0] if "-" in class_name else class_name
+CLASSES = {
+    "1-A": {  # Sinf rahbar: Buribayeva Xolida Narzikulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Xolida"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "5-dars", "fan": "Alifbe", "ustoz": "Xolida"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Xolida"},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Xolida"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Maloxat"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xolida"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Xolida"},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Xolida"},
+            {"soat": "4-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Xolida"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xolida"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Xolida"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xolida"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Maloxat"},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Xolida"},
+            {"soat": "5-dars", "fan": "Tarbiya", "ustoz": "Xolida"},
+        ],
+        "Shanba": [],
+    },
 
+    "1-B": {  # Sinf rahbar: Karimova Diyora Abdusalom qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora K."},
+            {"soat": "2-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Tasviriy sanat", "ustoz": "Diyora K."},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Diyora K."},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora K."},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Diyora K."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora K."},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Diyora K."},
+            {"soat": "3-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Diyora K."},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nargiza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Diyora K."},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Diyora K."},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora K."},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Nargiza"},
+            {"soat": "3-dars", "fan": "Alifbe", "ustoz": "Diyora K."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Shanba": [],
+    },
 
-def all_grades() -> list:
-    grades = []
-    for name in CLASS_NAMES:
-        g = get_grade(name)
-        if g not in grades:
-            grades.append(g)
-    return grades
+    "1-D": {  # Sinf rahbar: Ashurova Nodira Baxrom qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "3-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Nodira B."},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Nodira B."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nodira B."},
+            {"soat": "2-dars", "fan": "Mental", "ustoz": "Maftuna F."},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Nodira B."},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nodira B."},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Nodira B."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nodira B."},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Nodira B."},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Nodira B."},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zulfiya"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Nodira B."},
+        ],
+        "Shanba": [],
+    },
+
+    "1-E": {  # Sinf rahbar: Odilova Xabiba Sarvarovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Xabiba"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sevinch"},
+            {"soat": "4-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Xabiba"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "3-dars", "fan": "Tasviriy sanat", "ustoz": "Xabiba"},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Xabiba"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
+            {"soat": "2-dars", "fan": "Yozuv", "ustoz": "Xabiba"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sevinch"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sevinch"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
+            {"soat": "2-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sevinch"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Xabiba"},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Xabiba"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xabiba"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "3-dars", "fan": "Alifbe", "ustoz": "Xabiba"},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Xabiba"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Shanba": [],
+    },
+
+    "1-V": {  # Sinf rahbar: Pardayeva Marg'uba Xoliqovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marg'uba"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Marg'uba"},
+            {"soat": "5-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Marg'uba"},
+            {"soat": "2-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Marg'uba"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Marg'uba"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Marg'uba"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Marg'uba"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marg'uba"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marg'uba"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Dilnoza"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Marg'uba"},
+        ],
+        "Shanba": [],
+    },
+
+    "1-F": {  # Sinf rahbar: Shadiyeva Ra'no Baxodirovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ra'no"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Ra'no"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ra'no"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Ra'no"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Ra'no"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Ra'no"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mental", "ustoz": "Maftuna F."},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ra'no"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ra'no"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Ra'no"},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Ra'no"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ra'no"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Ra'no"},
+            {"soat": "3-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Ra'no"},
+            {"soat": "4-dars", "fan": "Texnologiya", "ustoz": "Ra'no"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+        ],
+        "Shanba": [],
+    },
+
+    "1-G": {  # Sinf rahbar: Abdurasulova Mukaddas Tashtemirovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mukaddas"},
+            {"soat": "2-dars", "fan": "Texnologiya", "ustoz": "Mukaddas"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mukaddas"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Mukaddas"},
+            {"soat": "3-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Mukaddas"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Mukaddas"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mukaddas"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Mukaddas"},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Mukaddas"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Mukaddas"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mukaddas"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Mukaddas"},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Mukaddas"},
+            {"soat": "4-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mukaddas"},
+            {"soat": "2-dars", "fan": "Yozuv", "ustoz": "Mukaddas"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Mukaddas"},
+        ],
+        "Shanba": [],
+    },
+
+    "1-H": {  # Sinf rahbar: Vitchinkina Marina Viktorovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marina V."},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Marina V."},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Marina V."},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Marina V."},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Marina V."},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marina V."},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Marina V."},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Marina V."},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Marina V."},
+            {"soat": "3-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Marina V."},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Marina V."},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Marina V."},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Marina V."},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Marina V."},
+        ],
+        "Shanba": [],
+    },
+
+    "1-I": {  # Sinf rahbar: Shanazarova Xurshida Valiyevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xurshida"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Xurshida"},
+            {"soat": "3-dars", "fan": "Texnologiya", "ustoz": "Xurshida"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Xurshida"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Xurshida"},
+            {"soat": "3-dars", "fan": "Alifbe", "ustoz": "Xurshida"},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Xurshida"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "3-dars", "fan": "Tasviriy sanat", "ustoz": "Xurshida"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Xurshida"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xurshida"},
+            {"soat": "2-dars", "fan": "Yozuv", "ustoz": "Xurshida"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Alifbe", "ustoz": "Xurshida"},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Xurshida"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Xurshida"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Xurshida"},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Xurshida"},
+            {"soat": "4-dars", "fan": "Musiqa", "ustoz": "Xurshida"},
+        ],
+        "Shanba": [],
+    },
+
+    "1-K": {  # Sinf rahbar: Ergasheva Zamira Raxmatullayevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Zamira"},
+            {"soat": "2-dars", "fan": "Alifbe", "ustoz": "Zamira"},
+            {"soat": "3-dars", "fan": "Yozuv", "ustoz": "Zamira"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Zamira"},
+            {"soat": "2-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Zamira"},
+            {"soat": "3-dars", "fan": "Alifbe", "ustoz": "Zamira"},
+            {"soat": "4-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Yozuv", "ustoz": "Zamira"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Zamira"},
+            {"soat": "2-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Zamira"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Zamira"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Alifbe", "ustoz": "Zamira"},
+            {"soat": "4-dars", "fan": "Yozuv", "ustoz": "Zamira"},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Zamira"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Zamira"},
+            {"soat": "2-dars", "fan": "Yozuv", "ustoz": "Zamira"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-A": {  # Sinf rahbar: Pardayeva Shaxnoza Saibnazarovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Shaxnoza"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Shaxnoza"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Shaxnoza"},
+            {"soat": "2-dars", "fan": "O'qish savodxonligi", "ustoz": "Shaxnoza"},
+            {"soat": "3-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Diyora"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Shaxnoza"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Shaxnoza"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Shaxnoza"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Shaxnoza"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "5-dars", "fan": "Tarbiya", "ustoz": "Shaxnoza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Shaxnoza"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Diyora"},
+            {"soat": "3-dars", "fan": "Tasviriy sanat", "ustoz": "Shaxnoza"},
+            {"soat": "4-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Shaxnoza"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-B": {  # Sinf rahbar: Akmuratova Iroda Bahodir qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nargiza"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Texnologiya", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Tarbiya", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nargiza"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Iroda"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-D": {  # Sinf rahbar: Rajabova Nasiba Saydullayevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Tasviriy sanat", "ustoz": "Nasiba"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "5-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Nasiba"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Nasiba"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Nasiba"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Texnologiya", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Nasiba"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-V": {  # Sinf rahbar: Avazova Gulchexra Alimjanovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Marina"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Gulchexra"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Gulchexra"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Gulchexra"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Marina"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Gulchexra"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Gulchexra"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Gulchexra"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Gulchexra"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Gulchexra"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Gulchexra"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Gulchexra"},
+            {"soat": "2-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "E'zoza"},
+            {"soat": "5-dars", "fan": "O'qish savodxonligi", "ustoz": "Gulchexra"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-E": {  # Sinf rahbar: Prosyannikova Veronika Sergeyevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Veronika S."},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Veronika S."},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Veronika S."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Veronika S."},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Veronika S."},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika S."},
+            {"soat": "2-dars", "fan": "Tasviriy sanat", "ustoz": "Veronika S."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "5-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Veronika S."},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika S."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Veronika S."},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Veronika S."},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Veronika S."},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "2-dars", "fan": "O'zbek tili", "ustoz": "Shaxnoza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Veronika S."},
+            {"soat": "4-dars", "fan": "Texnologiya", "ustoz": "Veronika S."},
+        ],
+        "Shanba": [],
+    },
+
+    "2-F": {  # Sinf rahbar: Polyakova Veronika Igorevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika I."},
+            {"soat": "2-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Veronika I."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Veronika I."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika I."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Veronika I."},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "5-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika I."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Veronika I."},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Veronika I."},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Veronika I."},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Veronika I."},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Veronika I."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Veronika I."},
+            {"soat": "3-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Veronika I."},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Veronika I."},
+        ],
+        "Shanba": [],
+    },
+
+    "2-G": {  # Sinf rahbar: Shukurova Oksana Ilinichna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Oksana"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Oksana"},
+            {"soat": "3-dars", "fan": "Musiqa", "ustoz": "Oksana"},
+            {"soat": "4-dars", "fan": "Texnologiya", "ustoz": "Oksana"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Oksana"},
+            {"soat": "2-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Oksana"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "O'qish savodxonligi", "ustoz": "Oksana"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Oksana"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Oksana"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Oksana"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Oksana"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Oksana"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Tarbiya", "ustoz": "Oksana"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Oksana"},
+            {"soat": "4-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Oksana"},
+            {"soat": "5-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-H": {  # Sinf rahbar: Eshonkulova Maloxat Bavakulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maloxat B."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Maloxat B."},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Maloxat B."},
+            {"soat": "4-dars", "fan": "Musiqa", "ustoz": "Maloxat B."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maloxat B."},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maloxat B."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Maloxat B."},
+            {"soat": "3-dars", "fan": "Tarbiya", "ustoz": "Maloxat B."},
+            {"soat": "4-dars", "fan": "Tasviriy sanat", "ustoz": "Maloxat B."},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maloxat B."},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Maloxat B."},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Maloxat B."},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Maloxat B."},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maloxat B."},
+            {"soat": "2-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Maloxat B."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+            {"soat": "4-dars", "fan": "Shaxmat", "ustoz": "Samandar"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Bexruza"},
+        ],
+        "Shanba": [],
+    },
+
+    "2-I": {  # Sinf rahbar: Karimqulova Sevara Raxatullayevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Sevara"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Musharraf"},
+            {"soat": "4-dars", "fan": "Musiqa", "ustoz": "Sevara"},
+            {"soat": "5-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Sevara"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevara"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Sevara"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Sevara"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Sevara"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevara"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Sevara"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Sevara"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Sevara"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevara"},
+            {"soat": "2-dars", "fan": "Tarbiya", "ustoz": "Sevara"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevara"},
+            {"soat": "2-dars", "fan": "Texnologiya", "ustoz": "Sevara"},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Sevara"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-A": {  # Sinf rahbar: Umurzakova Musharraf To'raqulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Musharraf"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Musharraf"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Musharraf"},
+            {"soat": "5-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Musharraf"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Musharraf"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Musharraf"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Musharraf"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Musharraf"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Musharraf"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Musharraf"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Musharraf"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Musharraf"},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Musharraf"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-B": {  # Sinf rahbar: Sultanova Farida Safaraliyevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Farida"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Farida"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Farida"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Farida"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Farida"},
+            {"soat": "2-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Farida"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Farida"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Farida"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Farida"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Farida"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Farida"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Farida"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Farida"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Farida"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Farida"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-V": {  # Sinf rahbar: Yakubova Mashhura Kurbonboyevna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "5-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mashhura"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Mashhura"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mashhura"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Mashhura"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mashhura"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Mashhura"},
+            {"soat": "3-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Mashhura"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mashhura"},
+            {"soat": "2-dars", "fan": "O'qish savodxonligi", "ustoz": "Mashhura"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulruh"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-F": {  # Sinf rahbar: Yusufjonova Sevinch Erkin qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "2-dars", "fan": "O'qish savodxonligi", "ustoz": "Sevinch Y."},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Sevinch Y."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Sevinch Y."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevinch Y."},
+            {"soat": "2-dars", "fan": "O'qish savodxonligi", "ustoz": "Sevinch Y."},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sardor"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Sardor"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Sevinch Y."},
+            {"soat": "4-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Sevinch Y."},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Sevinch Y."},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "3-dars", "fan": "Texnologiya", "ustoz": "Sevinch Y."},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Sevinch Y."},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Sevinch Y."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sevinch Y."},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-G": {  # Sinf rahbar: Marupova Diyora Axmatovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora M."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Diyora M."},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Diyora M."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Omina"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Omina"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora M."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Diyora M."},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "5-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Diyora M."},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora M."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Diyora M."},
+            {"soat": "3-dars", "fan": "Tasviriy sanat", "ustoz": "Diyora M."},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Diyora M."},
+            {"soat": "5-dars", "fan": "Musiqa", "ustoz": "Diyora M."},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Diyora M."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Diyora M."},
+            {"soat": "3-dars", "fan": "Texnologiya", "ustoz": "Diyora M."},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Diyora M."},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Diyora M."},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Diyora M."},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-D": {  # Sinf rahbar: Qodirova Aziza Xujayarovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "O'zbek tili", "ustoz": "Marg'uba"},
+            {"soat": "2-dars", "fan": "O'zbek tili", "ustoz": "Marg'uba"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Aziza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Aziza"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Aziza"},
+            {"soat": "3-dars", "fan": "O'qish savodxonligi", "ustoz": "Aziza"},
+            {"soat": "4-dars", "fan": "Musiqa", "ustoz": "Aziza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "5-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Aziza"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Aziza"},
+            {"soat": "3-dars", "fan": "Informatika va axborot texnologiyalari", "ustoz": "Aziza"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Aziza"},
+            {"soat": "5-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Aziza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Aziza"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Aziza"},
+            {"soat": "3-dars", "fan": "Texnologiya", "ustoz": "Aziza"},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Aziza"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Aziza"},
+        ],
+        "Shanba": [],
+    },
+
+    "3-E": {  # Sinf rahbar: Yusupova Dilnoza Xolmuhammatova
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Dilnoza X."},
+            {"soat": "4-dars", "fan": "O'qish savodxonligi", "ustoz": "Dilnoza X."},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Dilnoza X."},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Dilnoza X."},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Dilnoza X."},
+            {"soat": "3-dars", "fan": "Tabiiy fan (Science)", "ustoz": "Dilnoza X."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "5-dars", "fan": "O'qish savodxonligi", "ustoz": "Dilnoza X."},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Dilnoza X."},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Dilnoza X."},
+            {"soat": "2-dars", "fan": "O'qish savodxonligi", "ustoz": "Dilnoza X."},
+            {"soat": "3-dars", "fan": "Texnologiya", "ustoz": "Dilnoza X."},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Dilnoza X."},
+        ],
+        "Shanba": [],
+    },
+
+    "4-A": {  # Sinf rahbar: Pardayeva Marg'uba Xoliqovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Marg'uba"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Marg'uba"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Marg'uba"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Hilola"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Marg'uba"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Marg'uba"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-B": {  # Sinf rahbar: Avazova Gulchexra Alimjanovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Gulchexra"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Gulchexra"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Gulchexra"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Gulchexra"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Gulshoda"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Gulchexra"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-V": {  # Sinf rahbar: Giyeyeva Zumrat Maxmudali qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Zumrat"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Zumrat"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Zumrat"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zarnigor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Zumrat"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-G": {  # Sinf rahbar: Abdurasulova Mukaddas Tashtemirovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Mukaddas"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Zumrat"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Mukaddas"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Doniyor"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Eldor"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Mukaddas"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-D": {  # Sinf rahbar: Nurmatova Nargiza Abdug'affor qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Tabiiy fan", "ustoz": "Nargiza"},
+            {"soat": "5-dars", "fan": "O'qish (rus)", "ustoz": "Nargiza"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Nargiza"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Tasviriy sanat", "ustoz": "Nargiza"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Nargiza"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Nargiza"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Texnologiya", "ustoz": "Nargiza"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Nargiza"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Nargiza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Ruxsora"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "2-dars", "fan": "O'qish (rus)", "ustoz": "Nargiza"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Nargiza"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Nargiza"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-E": {  # Sinf rahbar: Shadiyeva Ra'no Baxodirovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Ra'no"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Ra'no"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Ra'no"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Xurshid"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Sardor"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Nilufar"},
+        ],
+        "Shanba": [],
+    },
+
+    "4-F": {  # Sinf rahbar: Buribayeva Xolida Narzikulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Xolida"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Xolida"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xolida"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Zafar"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Xolida"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Dilrabo"},
+            {"soat": "2-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Javohir"},
+            {"soat": "3-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "4-dars", "fan": "Mantiqiy fikrlash", "ustoz": "Begzod"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Xolida"},
+        ],
+        "Shanba": [],
+    },
+
+    "5-A": {  # Sinf rahbar: Raxmonova Go'zal Bobir qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "5-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "3-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "1-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "2-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+        ],
+    },
+
+    "5-B": {  # Sinf rahbar: Raxmonova Go'zal Bobir qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mansur"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mansur"},
+        ],
+    },
+
+    "5-V": {  # Sinf rahbar: Sharafbayeva Pokiza Alikulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "3-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mansur"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+        ],
+    },
+
+    "5-G": {  # Sinf rahbar: Sharafbayeva Pokiza Alikulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "3-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "2-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "1-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "3-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "3-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+    },
+
+    "5-D": {  # Sinf rahbar: Sharafbayeva Pokiza Alikulovna
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+            {"soat": "4-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Kamila"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "4-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Maloxat"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Kamila"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "4-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Lola"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Kamila"},
+        ],
+    },
+
+    "6-A": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "4-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "3-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+        ],
+    },
+
+    "6-B": {  # Sinf rahbar: Xusanov Doniyor Xakim o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "5-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+        ],
+    },
+
+    "6-G": {  # Sinf rahbar: Xusanov Doniyor Xakim o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "3-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "5-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "5-dars", "fan": "Biologiya", "ustoz": "Islom"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+    },
+
+    "6-D": {  # Sinf rahbar: Abdullayev Abdulaziz Sobirjon o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "3-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "4-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "4-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "5-dars", "fan": "Informatika", "ustoz": "Sarvar"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "I.Feruza"},
+        ],
+    },
+
+    "7-A": {  # Sinf rahbar: Raxmonova Go'zal Bobir qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Mohichehra"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Fazliddin"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+        ],
+    },
+
+    "7-B": {  # Sinf rahbar: Abdullayev Abdulaziz Sobirjon o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+        ],
+    },
+
+    "7-V": {  # Sinf rahbar: Xusanov Doniyor Xakim o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "2-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "4-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "4-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Sarvar"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Malika"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Sarvar"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Sarvar"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+        ],
+    },
+
+    "7-G": {  # Sinf rahbar: Raxmonova Go'zal Bobir qizi
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "3-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "4-dars", "fan": "Fizika", "ustoz": "Noila"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "4-dars", "fan": "Fizika", "ustoz": "Noila"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Nodira"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+        ],
+    },
+
+    "8-A": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "4-dars", "fan": "Tabiiy fan", "ustoz": "Saidahmad"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+            {"soat": "3-dars", "fan": "Fizika", "ustoz": "Noila"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Maxmud"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Ro'zigul"},
+            {"soat": "3-dars", "fan": "Fizika", "ustoz": "Noila"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sherzod"},
+            {"soat": "2-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+        ],
+    },
+
+    "8-B": {  # Sinf rahbar: Abdullayev Abdulaziz Sobirjon o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "3-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Ilgiz"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Nargiza"},
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+        ],
+    },
+
+    "8-V": {  # Sinf rahbar: Abdullayev Abdulaziz Sobirjon o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "5-dars", "fan": "Biologiya", "ustoz": "Islom"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "3-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Sadoqat"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "1-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+        ],
+    },
+
+    "8-D": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Ilhom"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "2-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Ilhom"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Mansur"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Musulmon"},
+            {"soat": "2-dars", "fan": "Biologiya", "ustoz": "Ilhom"},
+        ],
+    },
+
+    "9-A": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xasan"},
+            {"soat": "4-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+            {"soat": "5-dars", "fan": "Huquq", "ustoz": "Mirjalol"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+            {"soat": "4-dars", "fan": "Huquq", "ustoz": "Mirjalol"},
+            {"soat": "5-dars", "fan": "Huquq", "ustoz": "Mirjalol"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Sodiq"},
+            {"soat": "3-dars", "fan": "Huquq", "ustoz": "Mirjalol"},
+            {"soat": "4-dars", "fan": "Huquq", "ustoz": "Mirjalol"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Muhriddin"},
+        ],
+    },
+
+    "9-B": {  # Sinf rahbar: Abdullayev Abdulaziz Sobirjon o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "4-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "1-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "O'zbek tili", "ustoz": "Ro'zigul"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "3-dars", "fan": "Rus tili", "ustoz": "Anjelika"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Umid"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Umid"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "4-dars", "fan": "Biologiya", "ustoz": "Islom"},
+            {"soat": "5-dars", "fan": "Biologiya", "ustoz": "Islom"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Shoxrux"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+        ],
+    },
+
+    "9-V": {  # Sinf rahbar: Jalilov Bobur Toir o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "2-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "3-dars", "fan": "Jismoniy tarbiya", "ustoz": "Xakim"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Tarix", "ustoz": "Asadbek"},
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "5-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "5-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "3-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+            {"soat": "5-dars", "fan": "Fizika", "ustoz": "Noila"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Gulmira"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "5-dars", "fan": "Fizika", "ustoz": "Noila"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Ingliz tili", "ustoz": "Zebo"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Soxiba"},
+        ],
+    },
+
+    "9-D": {  # Sinf rahbar: Xusanov Doniyor Xakim o'g'li
+        "Dushanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Xayrullo"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "3-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+            {"soat": "4-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "5-dars", "fan": "Jismoniy tarbiya", "ustoz": "Bekmurod"},
+        ],
+        "Seshanba": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Ismoil"},
+            {"soat": "2-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "3-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "5-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+        "Chorshanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Xayrullo"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+        ],
+        "Payshanba": [
+            {"soat": "1-dars", "fan": "Suniy intelekt", "ustoz": "Samandar Sariboyev"},
+            {"soat": "2-dars", "fan": "Kimyo", "ustoz": "Ismoil"},
+            {"soat": "3-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "4-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+            {"soat": "5-dars", "fan": "Tarix", "ustoz": "Mirjalol"},
+        ],
+        "Juma": [
+            {"soat": "1-dars", "fan": "Kimyo", "ustoz": "Ismoil"},
+            {"soat": "2-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+            {"soat": "2-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "3-dars", "fan": "Ona tili", "ustoz": "Iroda"},
+            {"soat": "4-dars", "fan": "Ingliz tili", "ustoz": "Shohida"},
+            {"soat": "5-dars", "fan": "Matematika", "ustoz": "Abdurahmon"},
+        ],
+        "Shanba": [
+            {"soat": "1-dars", "fan": "Biologiya", "ustoz": "Xayrullo"},
+            {"soat": "2-dars", "fan": "Rus tili", "ustoz": "Nasiba"},
+        ],
+    },
+}
 
 
 # ============================================================
-# ASOSIY MENYU
+# O'QITUVCHILAR JADVALI - CLASSES asosida AVTOMATIK hisoblanadi
 # ============================================================
+# Bu yerga QO'LDA hech narsa yozilmaydi - kod o'zi CLASSES'dan yig'ib chiqadi.
+# Shu tufayli sinf jadvali va o'qituvchi jadvali doim bir-biriga mos keladi.
 
-def main_menu_kb():
-    kb = InlineKeyboardBuilder()
-    kb.button(text="🏫 Sinflar bo'yicha", callback_data="menu_classes")
-    kb.button(text="👨‍🏫 O'qituvchilar bo'yicha", callback_data="menu_teachers")
-    kb.adjust(1)
-    return kb.as_markup()
+def _build_teachers_from_classes(classes_dict):
+    teachers = {}
+    for class_name, days in classes_dict.items():
+        for day, lessons in days.items():
+            for lesson in lessons:
+                ustoz = lesson["ustoz"]
+                if ustoz not in teachers:
+                    teachers[ustoz] = {d: [] for d in DAYS}
+                teachers[ustoz][day].append({
+                    "soat": lesson["soat"],
+                    "sinf": class_name,
+                    "fan": lesson["fan"],
+                })
+    return teachers
 
 
-@router.message(CommandStart())
-async def cmd_start(message: Message):
-    await message.answer(
-        "👋 <b>IDEAL Study maktabining dars jadvaliga xush kelibsiz!</b>\n\n"
-        "Quyidagi bo'limlardan birini tanlang:",
-        reply_markup=main_menu_kb(),
-    )
-
-
-@router.callback_query(F.data == "main_menu")
-async def back_to_main(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "👋 <b>IDEAL Study maktabining dars jadvaliga xush kelibsiz!</b>\n\n"
-        "Quyidagi bo'limlardan birini tanlang:",
-        reply_markup=main_menu_kb(),
-    )
-    await callback.answer()
+TEACHERS = _build_teachers_from_classes(CLASSES)
 
 
 # ============================================================
-# SINFLAR BO'LIMI:  parallel -> aniq sinf -> kun -> jadval
+# QO'SHIMCHA YUK: Mental arifmetika (Maftuna F.)
 # ============================================================
+# Bu darslar 0-sinf va 1-sinflarda o'tiladi, lekin CLASSES ichiga
+# QO'SHILMAGAN (foydalanuvchi iltimosiga ko'ra) - faqat shu ustozning
+# o'z shaxsiy jadvalida ko'rinadi.
+# Kun davomida: 1-5 soat - tushlikkacha smena, 6-8 soat - tushlikdan keyin.
 
-@router.callback_query(F.data == "menu_classes")
-async def show_grades(callback: CallbackQuery):
-    kb = InlineKeyboardBuilder()
-    for grade in all_grades():
-        kb.button(text=f"{grade}-sinflar", callback_data=f"grade_{grade}")
-    kb.button(text="⬅️ Orqaga", callback_data="main_menu")
-    kb.adjust(2)
-    await callback.message.edit_text("Qaysi parallel sinf kerak?", reply_markup=kb.as_markup())
-    await callback.answer()
+_maftuna_extra = {
+    "Dushanba": [
+        {"soat": "1-soat", "sinf": "0-E", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-A", "fan": "Mental arifmetika"},
+        {"soat": "3-soat", "sinf": "0-D", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "0-sinf", "fan": "Mental arifmetika"},  # aniq harf berilmagan
+    ],
+    "Seshanba": [
+        {"soat": "6-soat", "sinf": "1-E", "fan": "Mental arifmetika"},
+        {"soat": "8-soat", "sinf": "1-A", "fan": "Mental arifmetika"},
+    ],
+    "Chorshanba": [
+        {"soat": "1-soat", "sinf": "1-F", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-B", "fan": "Mental arifmetika"},
+        {"soat": "4-soat", "sinf": "0-A", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "0-sinf", "fan": "Mental arifmetika"},  # aniq harf berilmagan
+    ],
+    "Payshanba": [
+        {"soat": "8-soat", "sinf": "1-H", "fan": "Mental arifmetika"},
+    ],
+    "Juma": [
+        {"soat": "1-soat", "sinf": "0-B", "fan": "Mental arifmetika"},
+        {"soat": "2-soat", "sinf": "0-E", "fan": "Mental arifmetika"},
+        {"soat": "3-soat", "sinf": "0-D", "fan": "Mental arifmetika"},
+        {"soat": "6-soat", "sinf": "1-G", "fan": "Mental arifmetika"},
+        {"soat": "8-soat", "sinf": "1-V", "fan": "Mental arifmetika"},
+    ],
+    "Shanba": [],
+}
 
+if "Maftuna F." not in TEACHERS:
+    TEACHERS["Maftuna F."] = {d: [] for d in DAYS}
 
-@router.callback_query(F.data.startswith("grade_"))
-async def show_classes_in_grade(callback: CallbackQuery):
-    grade = callback.data.split("_", 1)[1]
-    kb = InlineKeyboardBuilder()
-    for idx, name in enumerate(CLASS_NAMES):
-        if get_grade(name) == grade:
-            kb.button(text=name, callback_data=f"cls_{idx}")
-    kb.button(text="⬅️ Orqaga", callback_data="menu_classes")
-    kb.adjust(3)
-    await callback.message.edit_text(f"{grade}-sinflardan birini tanlang:", reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("cls_"))
-async def show_class_days(callback: CallbackQuery):
-    idx = int(callback.data.split("_", 1)[1])
-    class_name = CLASS_NAMES[idx]
-    kb = InlineKeyboardBuilder()
-    for d_idx, day in enumerate(DAYS):
-        kb.button(text=day, callback_data=f"clsday_{idx}_{d_idx}")
-    kb.button(text="⬅️ Orqaga", callback_data=f"grade_{get_grade(class_name)}")
-    kb.adjust(2)
-    await callback.message.edit_text(f"📘 <b>{class_name}</b> sinfi. Qaysi kun kerak?", reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("clsday_"))
-async def show_class_schedule(callback: CallbackQuery):
-    _, idx, d_idx = callback.data.split("_")
-    idx, d_idx = int(idx), int(d_idx)
-    class_name = CLASS_NAMES[idx]
-    day = DAYS[d_idx]
-    lessons = CLASSES[class_name].get(day, [])
-
-    if lessons:
-        text = f"📘 <b>{class_name}</b> — {day}\n\n"
-        for lesson in lessons:
-            text += f"🕒 {lesson['soat']}\n📖 {lesson['fan']} — {lesson['ustoz']}\n\n"
-    else:
-        text = f"📘 <b>{class_name}</b> — {day}\n\nBu kuni dars yo'q."
-
-    kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Boshqa kun", callback_data=f"cls_{idx}")
-    kb.button(text="🏠 Bosh menyu", callback_data="main_menu")
-    kb.adjust(1)
-    await callback.message.edit_text(text, reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-# ============================================================
-# O'QITUVCHILAR BO'LIMI:  sahifalangan ro'yxat -> kun -> jadval
-# ============================================================
-
-def teachers_page_kb(page: int):
-    start = page * PAGE_SIZE
-    end = start + PAGE_SIZE
-    kb = InlineKeyboardBuilder()
-    for idx, name in enumerate(TEACHER_NAMES[start:end], start=start):
-        kb.button(text=name, callback_data=f"tch_{idx}")
-    kb.adjust(1)
-
-    nav = InlineKeyboardBuilder()
-    if page > 0:
-        nav.button(text="⬅️ Oldingi", callback_data=f"tchpage_{page - 1}")
-    if end < len(TEACHER_NAMES):
-        nav.button(text="Keyingi ➡️", callback_data=f"tchpage_{page + 1}")
-    nav.adjust(2)
-
-    kb.attach(nav)
-    back = InlineKeyboardBuilder()
-    back.button(text="⬅️ Bosh menyu", callback_data="main_menu")
-    kb.attach(back)
-    return kb.as_markup()
-
-
-@router.callback_query(F.data == "menu_teachers")
-async def show_teachers_page0(callback: CallbackQuery):
-    await callback.message.edit_text("O'qituvchini tanlang:", reply_markup=teachers_page_kb(0))
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("tchpage_"))
-async def show_teachers_page(callback: CallbackQuery):
-    page = int(callback.data.split("_", 1)[1])
-    await callback.message.edit_text("O'qituvchini tanlang:", reply_markup=teachers_page_kb(page))
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("tch_"))
-async def show_teacher_days(callback: CallbackQuery):
-    idx = int(callback.data.split("_", 1)[1])
-    teacher_name = TEACHER_NAMES[idx]
-    kb = InlineKeyboardBuilder()
-    for d_idx, day in enumerate(DAYS):
-        kb.button(text=day, callback_data=f"tchday_{idx}_{d_idx}")
-    kb.button(text="⬅️ Orqaga", callback_data="menu_teachers")
-    kb.adjust(2)
-    await callback.message.edit_text(f"👤 <b>{teacher_name}</b>. Qaysi kun kerak?", reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("tchday_"))
-async def show_teacher_schedule(callback: CallbackQuery):
-    _, idx, d_idx = callback.data.split("_")
-    idx, d_idx = int(idx), int(d_idx)
-    teacher_name = TEACHER_NAMES[idx]
-    day = DAYS[d_idx]
-    lessons = TEACHERS[teacher_name].get(day, [])
-
-    if lessons:
-        text = f"👤 <b>{teacher_name}</b> — {day}\n\n"
-        for lesson in lessons:
-            text += f"🕒 {lesson['soat']}\n🏫 {lesson['sinf']} — {lesson['fan']}\n\n"
-        text += f"Jami: {len(lessons)} soat dars."
-    else:
-        text = f"👤 <b>{teacher_name}</b> — {day}\n\nBu kuni dars yo'q."
-
-    kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Boshqa kun", callback_data=f"tch_{idx}")
-    kb.button(text="🏠 Bosh menyu", callback_data="main_menu")
-    kb.adjust(1)
-    await callback.message.edit_text(text, reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-# ============================================================
-# ERKIN YOZILGAN XABARLARGA JAVOB (tugmalardan foydalanish kerak)
-# ============================================================
-
-@router.message()
-async def any_text(message: Message):
-    await message.answer(
-        "Iltimos, faqat tugmalardan foydalaning 🙂",
-        reply_markup=main_menu_kb(),
-    )
-
-
-async def main():
-    if not BOT_TOKEN:
-        raise RuntimeError(
-            "BOT_TOKEN topilmadi! .env faylini yarating va ichiga "
-            "BOT_TOKEN=sizning_tokeningiz deb yozing (README.md ga qarang)."
-        )
-    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher()
-    dp.include_router(router)
-    print("Bot ishga tushdi...")
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+for _day, _lessons in _maftuna_extra.items():
+    TEACHERS["Maftuna F."][_day].extend(_lessons)
